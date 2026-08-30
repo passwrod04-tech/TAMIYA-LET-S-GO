@@ -98,3 +98,238 @@ container.appendChild(renderer.domElement);
 
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
+
+// แสงสว่าง
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+const light = new THREE.DirectionalLight(0xffffff, 0.8);
+light.position.set(5, 10, 5);
+scene.add(light);
+
+// ตัวกลุ่มโมเดลรถแข่ง
+const carGroup = new THREE.Group();
+scene.add(carGroup);
+
+function clearPartsFromStep(stepIndex) {
+    for (let i = stepIndex; i < buildSteps.length; i++) {
+        const stepName = buildSteps[i].name;
+        if (parts[stepName]) {
+            carGroup.remove(parts[stepName]);
+            delete parts[stepName];
+            delete carConfig[stepName];
+        }
+    }
+}
+
+function updateAssemblyVisual(stepIndex, selectedItem) {
+    clearPartsFromStep(stepIndex);
+    carConfig[buildSteps[stepIndex].name] = selectedItem;
+
+    const mat = new THREE.MeshStandardMaterial({ color: selectedItem.color });
+    const stepName = buildSteps[stepIndex].name;
+
+    if (stepIndex === 0) { // Chassis
+        const geo = new THREE.BoxGeometry(1.2, 0.25, 2.2);
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.y = 0.2;
+        parts[stepName] = mesh;
+    } 
+    else if (stepIndex === 1) { // Motor
+        const geo = new THREE.CylinderGeometry(0.2, 0.2, 0.6, 16);
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.rotation.z = Math.PI / 2;
+        mesh.position.set(0, 0.35, 0);
+        parts[stepName] = mesh;
+    }
+    else if (stepIndex === 2) { // Gear
+        const geo = new THREE.CylinderGeometry(0.15, 0.15, 0.1, 16);
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(0.3, 0.35, -0.3);
+        parts[stepName] = mesh;
+    }
+    else if (stepIndex === 3) { // Wheel & Tire
+        const wheelsGroup = new THREE.Group();
+        const wheelGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.15, 16);
+        const positions = [[-0.7, 0.3, 0.8], [0.7, 0.3, 0.8], [-0.7, 0.3, -0.8], [0.7, 0.3, -0.8]];
+        positions.forEach(pos => {
+            const w = new THREE.Mesh(wheelGeo, mat);
+            w.rotation.z = Math.PI / 2;
+            w.position.set(...pos);
+            wheelsGroup.add(w);
+        });
+        parts[stepName] = wheelsGroup;
+    }
+    else if (stepIndex === 4) { // Bumper & Roller
+        const bumperGroup = new THREE.Group();
+        const plateGeo = new THREE.BoxGeometry(1.8, 0.05, 0.2);
+        const plateFront = new THREE.Mesh(plateGeo, mat);
+        plateFront.position.set(0, 0.2, 1.2);
+        const plateRear = new THREE.Mesh(plateGeo, mat);
+        plateRear.position.set(0, 0.2, -1.2);
+        bumperGroup.add(plateFront);
+        bumperGroup.add(plateRear);
+        parts[stepName] = bumperGroup;
+    }
+    else if (stepIndex === 5) { // Body Shell
+        const geo = new THREE.ConeGeometry(0.5, 1.5, 4);
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.rotation.x = Math.PI / 2;
+        mesh.position.set(0, 0.6, 0);
+        parts[stepName] = mesh;
+    }
+
+    if (parts[stepName]) {
+        carGroup.add(parts[stepName]);
+    }
+}
+
+function updateUI() {
+    const step = buildSteps[currentStep];
+    document.getElementById('step-name').innerText = `ขั้นตอนที่ ${currentStep + 1}: เลือก ${step.name}`;
+    const container = document.getElementById('options-container');
+    container.innerHTML = '';
+    
+    const selectedItem = carConfig[step.name] || step.items[0];
+
+    step.items.forEach((item) => {
+        const btn = document.createElement('button');
+        btn.innerText = item.name;
+        if (item.name === selectedItem.name) btn.classList.add('active');
+        btn.onclick = () => {
+            Array.from(container.children).forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('item-info').innerText = item.desc;
+            updateAssemblyVisual(currentStep, item);
+        };
+        container.appendChild(btn);
+    });
+    
+    document.getElementById('item-info').innerText = selectedItem.desc;
+    updateAssemblyVisual(currentStep, selectedItem);
+}
+
+function nextStep() {
+    if (currentStep < buildSteps.length - 1) {
+        currentStep++;
+        updateUI();
+    } else {
+        document.getElementById('track-select-screen').style.display = 'flex';
+    }
+}
+
+function prevStep() {
+    if (currentStep > 0) {
+        currentStep--;
+        updateUI();
+    }
+}
+
+// --- ระบบสร้างสนามและมุมมอง Top-View ---
+let trackMesh;
+let selectedTrackId = 1;
+
+function selectTrack(trackId) {
+    selectedTrackId = trackId;
+    document.getElementById('track-select-screen').style.display = 'none';
+    document.getElementById('ui-panel').style.display = 'none';
+    document.getElementById('race-ui').style.display = 'block';
+    document.getElementById('track-name').innerText = `สนามที่ ${trackId}`;
+    
+    if (trackMesh) scene.remove(trackMesh);
+
+    let trackGeo;
+    if (trackId === 1) {
+        trackGeo = new THREE.TorusGeometry(4, 0.6, 16, 100);
+    } else if (trackId === 2) {
+        trackGeo = new THREE.TorusGeometry(3, 0.8, 16, 50);
+    } else {
+        trackGeo = new THREE.TorusGeometry(5, 0.5, 16, 100);
+    }
+
+    const trackMat = new THREE.MeshStandardMaterial({ color: 0x444444, wireframe: false });
+    trackMesh = new THREE.Mesh(trackGeo, trackMat);
+    trackMesh.rotation.x = Math.PI / 2;
+    scene.add(trackMesh);
+
+    // ล็อกมุมกล้อง Top-View ให้สมบูรณ์
+    controls.enabled = false;
+    camera.position.set(0, 14, 0);
+    controls.target.set(0, 0, 0);
+    controls.update();
+}
+
+let isRacing = false;
+let raceTime = 0;
+let angle = 0;
+
+function startRace() {
+    if (isRacing) return;
+    isRacing = true;
+    raceTime = 0;
+    angle = 0;
+    document.getElementById('start-btn').disabled = true;
+
+    // คำนวณตัวคูณความเร็วจากสเปกรถที่ประกอบ
+    let totalSpeedMult = 1.0;
+    Object.values(carConfig).forEach(item => {
+        if (item.speedMult) totalSpeedMult *= item.speedMult;
+    });
+
+    const radius = selectedTrackId === 2 ? 3 : (selectedTrackId === 3 ? 5 : 4);
+    const speed = 0.04 * totalSpeedMult;
+
+    const interval = setInterval(() => {
+        if (!isRacing) { clearInterval(interval); return; }
+        raceTime += 0.03;
+        document.getElementById('timer').innerText = raceTime.toFixed(2);
+        
+        angle += speed;
+        carGroup.position.x = Math.cos(angle) * radius;
+        carGroup.position.z = Math.sin(angle) * radius;
+        carGroup.rotation.y = -angle;
+
+        if (angle >= Math.PI * 6) { // วิ่งครบ 3 รอบ
+            isRacing = false;
+            clearInterval(interval);
+            document.getElementById('start-btn').disabled = false;
+            alert(`เข้าเส้นชัยแล้ว! เวลา 3 รอบ: ${raceTime.toFixed(2)} วินาที`);
+        }
+    }, 30);
+}
+
+function resetToBuild() {
+    isRacing = false;
+    document.getElementById('start-btn').disabled = false;
+    if (trackMesh) scene.remove(trackMesh);
+    
+    carGroup.position.set(0, 0, 0);
+    carGroup.rotation.set(0, 0, 0);
+    
+    document.getElementById('ui-panel').style.display = 'flex';
+    document.getElementById('race-ui').style.display = 'none';
+    currentStep = 0;
+    
+    controls.enabled = true;
+    camera.position.set(3, 2, 4);
+    controls.target.set(0, 0, 0);
+    controls.update();
+    
+    updateUI();
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    if (controls.enabled) controls.update();
+    renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / (window.innerHeight * 0.6);
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight * 0.6);
+});
+
+updateUI();
+animate();
+</script>
+</body>
+</html>
