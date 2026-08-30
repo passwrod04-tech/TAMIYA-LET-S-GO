@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini 4WD Builder & Race</title>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; font-family: 'Tahoma', sans-serif; background: #1a1a1a; color: #fff; }
+        #canvas-container { width: 100vw; height: 60vh; }
+        #ui-panel { width: 100vw; height: 40vh; background: #222; border-top: 3px solid #ff4444; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; justify: space-between; }
+        .step-title { font-size: 1.2rem; color: #ffeb3b; margin-bottom: 5px; }
+        .item-desc { font-size: 0.85rem; color: #ccc; height: 45px; overflow-y: auto; background: #333; padding: 8px; border-radius: 4px; }
+        .btn-group { display: flex; gap: 10px; margin-top: 10px; overflow-x: auto; padding-bottom: 5px; }
+        button { background: #ff4444; color: white; border: none; padding: 10px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+        button:hover { background: #ff6666; }
+        #race-ui { display: none; position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; font-size: 1.2rem; }
+    </style>
+    <!-- โหลด Three.js สำหรับสร้าง 3D -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <!-- UI หน้าแต่งรถ -->
+    <div id="ui-panel">
+        <div>
+            <div id="step-name" class="step-title">ขั้นตอนที่ 1: เลือก Chassis</div>
+            <div id="item-info" class="item-desc">เลือกลักษณะโครงรถหลักเพื่อเริ่มประกอบ</div>
+        </div>
+        <div id="options-container" class="btn-group"></div>
+        <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+            <button id="prev-btn" onclick="prevStep()">ย้อนกลับ</button>
+            <button id="next-btn" onclick="nextStep()">ขั้นตอนถัดไป</button>
+        </div>
+    </div>
+
+    <!-- UI หน้าแข่งรถ -->
+    <div id="race-ui">
+        <div>สนาม: <span id="track-name">Track 1</span></div>
+        <div>เวลาที่ใช้ (3 รอบ): <span id="timer">0.00</span> วินาที</div>
+        <button onclick="startRace()" style="margin-top: 10px;">ปล่อยรถแข่ง!</button>
+        <button onclick="resetToBuild()" style="margin-top: 10px; background:#555;">กลับไปแต่งรถ</button>
+    </div>
+
+<script>
+// --- ข้อมูลอะไหล่ 11 ขั้นตอนตามที่คุณต้องการ ---
+const buildSteps = [
+    { name: "Chassis", items: [
+        { name: "AR Chassis (มอเตอร์หลัง)", desc: "ศูนย์ถ่วงดี ลื่นไหลตามหลักแอโรไดนามิก", color: 0x333333 },
+        { name: "MS Chassis (มอเตอร์กลาง)", desc: "บาลานซ์ยอดเยี่ยม ส่งกำลังลงล้อได้เสถียร", color: 0x555555 }
+    ]},
+    { name: "Motor", items: [
+        { name: "Atomic-Tuned", desc: "สายสมดุล ควบคุมง่าย สมดุลทั้งสปีดและแรงบิด", speed: 1.2 },
+        { name: "Mach-Dash", desc: "รอบจัด รอบ RPM สูงมาก เน้นความเร็วทางตรง", speed: 1.8 }
+    ]},
+    { name: "Gear Set", items: [
+        { name: "3.5:1 (เขียว/ชมพู)", desc: "เน้นความเร็วปลายสูงสุด เหมาะกับทางตรง", gearRatio: 3.5 },
+        { name: "4:1 (ฟ้า/ส้ม)", desc: "เน้นแรงบิดและอัตราเร่ง ช่วยสปีดขึ้นเนิน", gearRatio: 4.0 }
+    ]},
+    { name: "Drive Shaft", items: [
+        { name: "Standard Shaft", desc: "เพลาเหล็กตัน ทนทานสูง", weight: 2 },
+        { name: "Hollow Shaft", desc: "เพลาสแตนเลสกลวง น้ำหนักเบา ออกตัวไว", weight: 1 }
+    ]},
+    { name: "Bearing", items: [
+        { name: "Plastic Bushing", desc: "บัสชิ่งพลาสติกติดกล่อง ความลื่นปานกลาง", friction: 0.5 },
+        { name: "620 Ball Bearing", desc: "ลูกปืนโลหะ ลดแรงเสียดทานสูงสุด ล้อหมุนไหลลื่น", friction: 0.1 }
+    ]},
+    { name: "Wheel", items: [
+        { name: "Small Wheel (ล้อเล็ก)", desc: "ศูนย์ถ่วงต่ำ ออกตัวไว ไม่ค่อยเด้ง", size: 0.8 },
+        { name: "Large Wheel (ล้อใหญ่)", desc: "ได้ความเร็วปลายสูง พุ่งตัวทางตรงได้ดี", size: 1.2 }
+    ]},
+    { name: "Tire", items: [
+        { name: "Super Hard (ยางแข็ง)", desc: "ลดอาการเด้งกระดอนเวลาลงเนิน เข้าโค้งไว", grip: 0.8 },
+        { name: "Low Friction (ยางมารูน)", desc: "ลื่นและแข็งที่สุด ไม่เด้งเลยเวลาลงเนิน", grip: 0.5 }
+    ]},
+    { name: "Bumper Plate", items: [
+        { name: "FRP Plate", desc: "ยืดหยุ่นได้ดี ราคาประหยัด", flex: 0.5 },
+        { name: "Carbon Plate", desc: "แข็งแกร่ง เบา ไม่บิดตัว ช่วยให้ตำแหน่งลูกกลิ้งนิ่ง", flex: 0.1 }
+    ]},
+    { name: "Roller", items: [
+        { name: "13mm Aluminum Bearing", desc: "หมุนลื่นที่สุด แข็งแรงทนทาน เข้าโค้งนิ่ง", rollerFriction: 0.1 },
+        { name: "Plastic Roller", desc: "น้ำหนักเบา ช่วยดึงความเร็วลงเล็กน้อยในโค้ง", rollerFriction: 0.4 }
+    ]},
+    { name: "Mass Damper", items: [
+        { name: "Standard Damper", desc: "ตุ้มถ่วงทองเหลือง ซับแรงกระแทกเวลาตกเนิน", bounce: 0.3 },
+        { name: "Heavy Damper", desc: "ตุ้มถ่วงแบบหนัก กดรถให้อยู่กับรางทันที", bounce: 0.1 }
+    ]},
+    { name: "Brake Stay", items: [
+        { name: "Pink Sponge Brake", desc: "ฟองน้ำเบรกความหนืดปานกลาง ชะลอความเร็วก่อนเหิน", brake: 0.8 },
+        { name: "Blue Sponge Brake", desc: "ความหนืดต่ำ ชะลอความเร็วเล็กน้อย รักษาสปีด", brake: 0.4 }
+    ]},
+    { name: "Body Shell", items: [
+        { name: "Avante Jr.", desc: "บอดี้ทรงสปอร์ตคลาสสิก", color: 0x0055ff },
+        { name: "Neo Vanquish", desc: "บอดี้โฉบเฉี่ยวสไตล์ทันสมัย", color: 0xff1111 }
+    ]}
+];
+
+let currentStep = 0;
+let carConfig = {};
+
+// --- ตั้งค่าระบบ 3D (Three.js) ---
+const container = document.getElementById('canvas-container');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x222222);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / (window.innerHeight * 0.6), 0.1, 1000);
+camera.position.set(3, 2, 4);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight * 0.6);
+container.appendChild(renderer.domElement);
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+// แสงสว่าง
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+scene.add(ambientLight);
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+dirLight.position.set(5, 10, 7);
+scene.add(dirLight);
+
+// สร้างโมเดลจำลองตัวรถ 3D
+const carGroup = new THREE.Group();
+scene.add(carGroup);
+
+const chassisGeo = new THREE.BoxGeometry(1.5, 0.3, 2.5);
+const chassisMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+const carMesh = new THREE.Mesh(chassisGeo, chassisMat);
+carGroup.add(carMesh);
+
+// ฟังก์ชันอัปเดต UI เมื่อเปลี่ยนขั้นตอน
+function updateUI() {
+    const step = buildSteps[currentStep];
+    document.getElementById('step-name').innerText = `ขั้นตอนที่ ${currentStep + 1}: เลือก ${step.name}`;
+    
+    const container = document.getElementById('options-container');
+    container.innerHTML = '';
+    
+    step.items.forEach((item, index) => {
+        const btn = document.createElement('button');
+        btn.innerText = item.name;
+        btn.onclick = () => selectOption(item);
+        container.appendChild(btn);
+    });
+    
+    document.getElementById('item-info').innerText = step.items[0].desc;
+}
+
+function selectOption(item) {
+    document.getElementById('item-info').innerText = item.desc;
+    carConfig[buildSteps[currentStep].name] = item;
+    
+    // เปลี่ยนสี/รูปทรงตัวอย่างแบบ Real-time
+    if(item.color) carMesh.material.color.setHex(item.color);
+}
+
+function nextStep() {
+    if (currentStep < buildSteps.length - 1) {
+        currentStep++;
+        updateUI();
+    } else {
+        startRaceMode();
+    }
+}
+
+function prevStep() {
+    if (currentStep > 0) {
+        currentStep--;
+        updateUI();
+    }
+}
+
+function startRaceMode() {
+    document.getElementById('ui-panel').style.display = 'none';
+    document.getElementById('race-ui').style.display = 'block';
+    // ปรับมุมกล้องสำหรับดูแข่ง
+    camera.position.set(0, 8, 8);
+    controls.update();
+}
+
+function resetToBuild() {
+    document.getElementById('ui-panel').style.display = 'flex';
+    document.getElementById('race-ui').style.display = 'none';
+    currentStep = 0;
+    updateUI();
+    camera.position.set(3, 2, 4);
+}
+
+// ระบบจำลองการแข่งและจับเวลา 3 รอบ
+let isRacing = false;
+let raceTime = 0;
+function startRace() {
+    isRacing = true;
+    raceTime = 0;
+    let laps = 0;
+    
+    const interval = setInterval(() => {
+        if (!isRacing) { clearInterval(interval); return; }
+        raceTime += 0.05;
+        document.getElementById('timer').innerText = raceTime.toFixed(2);
+        
+        // หมุนตัวรถจำลองการวิ่งรอบสนาม
+        carGroup.rotation.y += 0.1;
+
+        if (raceTime >= 12) { // จำลองว่าวิ่งครบ 3 รอบที่ 12 วินาที
+            isRacing = false;
+            clearInterval(interval);
+            alert(`เข้าเส้นชัยแล้ว! เวลา 3 รอบ: ${raceTime.toFixed(2)} วินาที`);
+        }
+    }, 50);
+}
+
+// Loop การแสดงผล 3D
+function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+}
+
+updateUI();
+animate();
+</script>
+</body>
+</html>
