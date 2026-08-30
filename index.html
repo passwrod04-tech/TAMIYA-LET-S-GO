@@ -9,10 +9,11 @@
         #canvas-container { width: 100vw; height: 60vh; }
         #ui-panel { width: 100vw; height: 40vh; background: #222; border-top: 3px solid #ff4444; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; }
         .step-title { font-size: 1.2rem; color: #ffeb3b; }
-        .item-desc { font-size: 0.85rem; color: #ccc; height: 40px; background: #333; padding: 8px; border-radius: 4px; margin-top: 5px; }
+        .item-desc { font-size: 0.85rem; color: #ccc; height: 45px; background: #333; padding: 8px; border-radius: 4px; margin-top: 5px; }
         .btn-group { display: flex; gap: 10px; margin-top: 10px; overflow-x: auto; padding-bottom: 5px; }
         button { background: #ff4444; color: white; border: none; padding: 10px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; white-space: nowrap; }
         button:hover { background: #ff6666; }
+        button.active { background: #4caf50; }
         #track-select-screen { display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); flex-direction: column; align-items: center; justify-content: center; z-index: 10; }
         #race-ui { display: none; position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; font-size: 1.2rem; z-index: 5; }
     </style>
@@ -23,7 +24,6 @@
 
     <div id="canvas-container"></div>
 
-    <!-- หน้าเลือกแต่งรถ -->
     <div id="ui-panel">
         <div>
             <div id="step-name" class="step-title">ขั้นตอนที่ 1: เลือก Chassis</div>
@@ -36,7 +36,6 @@
         </div>
     </div>
 
-    <!-- หน้าเลือกสนามแข่ง -->
     <div id="track-select-screen">
         <h2>เลือกสนามแข่ง Tamiya (3 สนาม)</h2>
         <div style="display: flex; gap: 15px; margin-top: 20px;">
@@ -46,43 +45,44 @@
         </div>
     </div>
 
-    <!-- UI ขณะแข่ง (มุมมอง Top-View) -->
     <div id="race-ui">
         <div>สนาม: <span id="track-name">Track 1</span></div>
         <div>เวลาที่ใช้ (3 รอบ): <span id="timer">0.00</span> วินาที</div>
-        <button onclick="startRace()" style="margin-top: 10px;">ปล่อยรถแข่ง!</button>
+        <button id="start-btn" onclick="startRace()" style="margin-top: 10px;">ปล่อยรถแข่ง!</button>
         <button onclick="resetToBuild()" style="margin-top: 10px; background:#555;">กลับไปแต่งรถ</button>
     </div>
 
 <script>
 const buildSteps = [
     { name: "Chassis", items: [
-        { name: "AR Chassis", desc: "แชสซีมอเตอร์หลัง ศูนย์ถ่วงดีเยี่ยม", color: 0x333333 },
-        { name: "MS Chassis", desc: "แชสซีมอเตอร์กลาง สมดุลส่งกำลังดี", color: 0x555555 }
+        { name: "AR Chassis", desc: "แชสซีมอเตอร์หลัง ศูนย์ถ่วงดีเยี่ยม", color: 0x333333, speedMult: 1.0 },
+        { name: "MS Chassis", desc: "แชสซีมอเตอร์กลาง สมดุลส่งกำลังดี", color: 0x555555, speedMult: 1.05 }
     ]},
     { name: "Motor", items: [
-        { name: "Atomic-Tuned (สีเขียว)", desc: "สายสมดุล ควบคุมง่าย", color: 0x2e7d32 },
-        { name: "Mach-Dash (สีแดง)", desc: "รอบจัด เน้นความเร็วทางตรง", color: 0xc62828 }
+        { name: "Atomic-Tuned (เขียว)", desc: "สายสมดุล ควบคุมง่าย สมดุลสปีดแรงบิด", color: 0x2e7d32, speedMult: 1.1 },
+        { name: "Mach-Dash (แดง)", desc: "รอบจัด รอบ RPM สูง เน้นทางตรง", color: 0xc62828, speedMult: 1.4 }
     ]},
     { name: "Gear Set", items: [
-        { name: "3.5:1 (เขียว/ชมพู)", desc: "เฟืองสปีดเน้นความเร็วปลาย", color: 0xf48fb1 },
-        { name: "4:1 (ฟ้า/ส้ม)", desc: "เฟืองแรงบิดเน้นอัตราเร่งขึ้นเนิน", color: 0xffb74d }
+        { name: "3.5:1 (เขียว/ชมพู)", desc: "เฟืองสปีดเน้นความเร็วปลายทางตรง", color: 0xf48fb1, speedMult: 1.25 },
+        { name: "4:1 (ฟ้า/ส้ม)", desc: "เฟืองแรงบิดเน้นอัตราเร่งขึ้นเนิน", color: 0xffb74d, speedMult: 1.0 }
     ]},
     { name: "Wheel & Tire", items: [
-        { name: "Small Wheel + Maroon Tire", desc: "ล้อเล็กยางลื่น ยึดเกาะปานกลาง ไม่เด้ง", color: 0x880e4f },
-        { name: "Large Wheel + Super Hard", desc: "ล้อใหญ่ยางแข็ง ความเร็วปลายสูง", color: 0x212121 }
+        { name: "Small + Maroon Tire", desc: "ล้อเล็กยางลื่น ยึดเกาะปานกลาง ไม่เด้ง", color: 0x880e4f, speedMult: 1.0 },
+        { name: "Large + Super Hard", desc: "ล้อใหญ่ยางแข็ง ความเร็วปลายสูง", color: 0x212121, speedMult: 1.2 }
     ]},
     { name: "Bumper & Roller", items: [
-        { name: "FRP + Plastic Rollers", desc: "ชุดกันชนสเปกเริ่มต้น", color: 0x9e9e9e },
-        { name: "Carbon + Aluminum Rollers", desc: "ชุดกันชนคาร์บอนและลูกกลิ้งอลูมิเนียม", color: 0x111111 }
+        { name: "FRP + Plastic Rollers", desc: "ชุดกันชนสเปกเริ่มต้น ทานแรงเสียดทานปานกลาง", color: 0x9e9e9e, speedMult: 1.0 },
+        { name: "Carbon + Aluminum", desc: "กันชนคาร์บอนและลูกกลิ้งอลูมิเนียม ลื่นนิ่ง", color: 0x111111, speedMult: 1.15 }
     ]},
     { name: "Body Shell", items: [
-        { name: "Avante Jr. Body", desc: "ครอบบอดี้แอโรสปอร์ตคลาสสิก", color: 0x1565c0 },
-        { name: "Neo Vanquish Body", desc: "ครอบบอดี้ดีไซน์โฉบเฉี่ยว", color: 0xd32f2f }
+        { name: "Avante Jr. Body", desc: "ครอบบอดี้แอโรสปอร์ตคลาสสิก", color: 0x1565c0, speedMult: 1.0 },
+        { name: "Neo Vanquish Body", desc: "ครอบบอดี้ดีไซน์โฉบเฉี่ยว", color: 0xd32f2f, speedMult: 1.0 }
     ]}
 ];
 
 let currentStep = 0;
+let carConfig = {};
+let parts = {};
 
 // --- ตั้งค่าระบบ 3D Canvas ---
 const container = document.getElementById('canvas-container');
@@ -98,191 +98,3 @@ container.appendChild(renderer.domElement);
 
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-
-// แสงสว่าง
-scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-const light = new THREE.DirectionalLight(0xffffff, 0.8);
-light.position.set(5, 10, 5);
-scene.add(light);
-
-// กลุ่มโมเดลตัวรถที่จะค่อยๆ เพิ่มชิ้นส่วนลงไป
-const carGroup = new THREE.Group();
-scene.add(carGroup);
-
-// วัตถุเก็บชิ้นส่วนแต่ละชิ้น
-let parts = {};
-
-function updateAssemblyVisual(stepIndex, selectedItem) {
-    const mat = new THREE.MeshStandardMaterial({ color: selectedItem.color });
-    
-    // 1. ชิ้นส่วน Chassis
-    if (stepIndex === 0) {
-        if (parts.chassis) carGroup.remove(parts.chassis);
-        const geo = new THREE.BoxGeometry(1.2, 0.25, 2.2);
-        parts.chassis = new THREE.Mesh(geo, mat);
-        parts.chassis.position.y = 0.2;
-        carGroup.add(parts.chassis);
-    } 
-    // 2. มอเตอร์ (โผล่มาเสียบลงตรงกลาง Chassis)
-    else if (stepIndex === 1) {
-        if (parts.motor) carGroup.remove(parts.motor);
-        const geo = new THREE.CylinderGeometry(0.2, 0.2, 0.6, 16);
-        parts.motor = new THREE.Mesh(geo, mat);
-        parts.motor.rotation.z = Math.PI / 2;
-        parts.motor.position.set(0, 0.35, 0); // วางไว้กลางแชสซี
-        carGroup.add(parts.motor);
-    }
-    // 3. ชุดเฟือง (ประกอบเข้าข้างมอเตอร์)
-    else if (stepIndex === 2) {
-        if (parts.gear) carGroup.remove(parts.gear);
-        const geo = new THREE.CylinderGeometry(0.15, 0.15, 0.1, 16);
-        parts.gear = new THREE.Mesh(geo, mat);
-        parts.gear.position.set(0.3, 0.35, -0.3);
-        carGroup.add(parts.gear);
-    }
-    // 4. ล้อและยาง (โผล่มาติด 4 ข้าง)
-    else if (stepIndex === 3) {
-        if (parts.wheels) carGroup.remove(parts.wheels);
-        parts.wheels = new THREE.Group();
-        const wheelGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.15, 16);
-        
-        const positions = [[-0.7, 0.3, 0.8], [0.7, 0.3, 0.8], [-0.7, 0.3, -0.8], [0.7, 0.3, -0.8]];
-        positions.forEach(pos => {
-            const w = new THREE.Mesh(wheelGeo, mat);
-            w.rotation.z = Math.PI / 2;
-            w.position.set(...pos);
-            parts.wheels.add(w);
-        });
-        carGroup.add(parts.wheels);
-    }
-    // 5. กันชนและลูกกลิ้ง
-    else if (stepIndex === 4) {
-        if (parts.bumper) carGroup.remove(parts.bumper);
-        parts.bumper = new THREE.Group();
-        const plateGeo = new THREE.BoxGeometry(1.8, 0.05, 0.2);
-        const plateFront = new THREE.Mesh(plateGeo, mat);
-        plateFront.position.set(0, 0.2, 1.2);
-        parts.bumper.add(plateFront);
-        carGroup.add(parts.bumper);
-    }
-    // 6. ครอบบอดี้ชิ้นสุดท้าย
-    else if (stepIndex === 5) {
-        if (parts.body) carGroup.remove(parts.body);
-        const geo = new THREE.ConeGeometry(0.5, 1.5, 4);
-        parts.body = new THREE.Mesh(geo, mat);
-        parts.body.rotation.x = Math.PI / 2;
-        parts.body.position.set(0, 0.6, 0);
-        carGroup.add(parts.body);
-    }
-}
-
-// UI Handler
-function updateUI() {
-    const step = buildSteps[currentStep];
-    document.getElementById('step-name').innerText = `ขั้นตอนที่ ${currentStep + 1}: เลือก ${step.name}`;
-    const container = document.getElementById('options-container');
-    container.innerHTML = '';
-    
-    step.items.forEach((item) => {
-        const btn = document.createElement('button');
-        btn.innerText = item.name;
-        btn.onclick = () => {
-            document.getElementById('item-info').innerText = item.desc;
-            updateAssemblyVisual(currentStep, item);
-        };
-        container.appendChild(btn);
-    });
-    
-    document.getElementById('item-info').innerText = step.items[0].desc;
-    updateAssemblyVisual(currentStep, step.items[0]);
-}
-
-function nextStep() {
-    if (currentStep < buildSteps.length - 1) {
-        currentStep++;
-        updateUI();
-    } else {
-        document.getElementById('track-select-screen').style.display = 'flex';
-    }
-}
-
-function prevStep() {
-    if (currentStep > 0) {
-        currentStep--;
-        updateUI();
-    }
-}
-
-// --- ระบบสนามและมุมมอง Top-View ---
-let trackMesh;
-function selectTrack(trackId) {
-    document.getElementById('track-select-screen').style.display = 'none';
-    document.getElementById('ui-panel').style.display = 'none';
-    document.getElementById('race-ui').style.display = 'block';
-    document.getElementById('track-name').innerText = `สนามที่ ${trackId}`;
-    
-    // สร้างสนามแข่งราง 3D (รูปวงรี)
-    if (trackMesh) scene.remove(trackMesh);
-    const trackGeo = new THREE.TorusGeometry(4, 0.6, 16, 100);
-    const trackMat = new THREE.MeshStandardMaterial({ color: 0x333333, wireframe: false });
-    trackMesh = new THREE.Mesh(trackGeo, trackMat);
-    trackMesh.rotation.x = Math.PI / 2;
-    scene.add(trackMesh);
-
-    // **ตั้งค่ากล้องเป็นมุมมอง Top-View (มองตรงจากด้านบน)**
-    camera.position.set(0, 12, 0);
-    camera.lookAt(0, 0, 0);
-    controls.enabled = false; // ปิดการหมุนกล้องขณะวิ่งเพื่อล็อกมุม Top-View
-}
-
-let isRacing = false;
-let raceTime = 0;
-let angle = 0;
-function startRace() {
-    isRacing = true;
-    raceTime = 0;
-    angle = 0;
-    
-    const interval = setInterval(() => {
-        if (!isRacing) { clearInterval(interval); return; }
-        raceTime += 0.03;
-        document.getElementById('timer').innerText = raceTime.toFixed(2);
-        
-        // วิ่งวนตามรางวงรีในมุมมอง Top-View
-        angle += 0.05;
-        carGroup.position.x = Math.cos(angle) * 4;
-        carGroup.position.z = Math.sin(angle) * 4;
-        carGroup.rotation.y = -angle;
-
-        if (angle >= Math.PI * 6) { // วิ่งครบ 3 รอบ (2PI * 3 = 6PI)
-            isRacing = false;
-            clearInterval(interval);
-            alert(`เข้าเส้นชัยแล้ว! เวลา 3 รอบ: ${raceTime.toFixed(2)} วินาที`);
-        }
-    }, 30);
-}
-
-function resetToBuild() {
-    if (trackMesh) scene.remove(trackMesh);
-    carGroup.position.set(0,0,0);
-    carGroup.rotation.set(0,0,0);
-    
-    document.getElementById('ui-panel').style.display = 'flex';
-    document.getElementById('race-ui').style.display = 'none';
-    currentStep = 0;
-    controls.enabled = true;
-    camera.position.set(3, 2, 4);
-    updateUI();
-}
-
-function animate() {
-    requestAnimationFrame(animate);
-    if (controls.enabled) controls.update();
-    renderer.render(scene, camera);
-}
-
-updateUI();
-animate();
-</script>
-</body>
-</html>
