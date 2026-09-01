@@ -3,333 +3,447 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mini 4WD Real Assembly & Track</title>
+    <title>Tamiya Mini 4WD Full Custom - Top View Track</title>
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; font-family: 'Tahoma', sans-serif; background: #111; color: #fff; }
-        #canvas-container { width: 100vw; height: 60vh; }
-        #ui-panel { width: 100vw; height: 40vh; background: #222; border-top: 3px solid #ff4444; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; }
-        .step-title { font-size: 1.2rem; color: #ffeb3b; }
-        .item-desc { font-size: 0.85rem; color: #ccc; height: 45px; background: #333; padding: 8px; border-radius: 4px; margin-top: 5px; }
-        .btn-group { display: flex; gap: 10px; margin-top: 10px; overflow-x: auto; padding-bottom: 5px; }
-        button { background: #ff4444; color: white; border: none; padding: 10px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; white-space: nowrap; }
-        button:hover { background: #ff6666; }
-        button.active { background: #4caf50; }
-        #track-select-screen { display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); flex-direction: column; align-items: center; justify-content: center; z-index: 10; }
-        #race-ui { display: none; position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; font-size: 1.2rem; z-index: 5; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #111; color: white; user-select: none; }
+        #canvas-container { width: 100vw; height: 100vh; }
+        
+        /* Loading Screen CSS */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #0a0a0a;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s ease;
+        }
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 6px solid #222;
+            border-top: 6px solid #ff4444;
+            border-right: 6px solid #ff4444;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 20px;
+            box-shadow: 0 0 15px rgba(255, 68, 68, 0.4);
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loading-title { color: #ff4444; font-size: 1.8rem; margin: 0; letter-spacing: 2px; text-transform: uppercase; font-weight: 800; }
+        .loading-text { color: #aaa; margin-top: 8px; font-size: 0.95rem; font-family: monospace; }
+
+        /* UI Panels */
+        .ui-panel { position: absolute; z-index: 10; background: rgba(0,0,0,0.85); border: 1px solid #444; border-radius: 8px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        #parts-selector { top: 20px; left: 20px; width: 320px; max-height: 85vh; overflow-y: auto; }
+        #stats-panel { top: 20px; right: 20px; width: 220px; }
+        #race-ui { bottom: 20px; left: 50%; transform: translateX(-50%); text-align: center; display: none; }
+        
+        h3 { margin: 0 0 10px 0; color: #ff4444; border-bottom: 1px solid #444; padding-bottom: 5px; }
+        .step-title { font-size: 0.95rem; color: #ffca28; margin-bottom: 8px; font-weight: bold; }
+        .item-btn { display: block; width: 100%; padding: 8px 10px; margin: 5px 0; background: #222; border: 1px solid #555; color: white; border-radius: 5px; cursor: pointer; text-align: left; transition: 0.2s; }
+        .item-btn:hover { background: #e53935; border-color: #ff5252; }
+        
+        .stat-bar { margin: 6px 0; font-size: 0.85rem; display: flex; justify-content: space-between; }
+        .stat-val { font-weight: bold; color: #00e676; }
+        .btn-action { background: #e53935; color: white; border: none; padding: 10px 20px; font-weight: bold; border-radius: 5px; cursor: pointer; font-size: 1rem; margin: 0 5px; }
+        .btn-action:hover { background: #ff5252; }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
 
+    <div id="loading-screen">
+        <div class="spinner"></div>
+        <h2 class="loading-title">Tamiya Mini 4WD</h2>
+        <div id="loading-text" class="loading-text">กำลังโหลดโมเดล 3D และชิ้นส่วน...</div>
+    </div>
+
+    <div id="parts-selector" class="ui-panel">
+        <h3>Garage Builder</h3>
+        <div id="step-desc" class="step-title">ขั้นตอนที่ 1: เลือก Chassis</div>
+        <div id="options-list"></div>
+    </div>
+
+    <div id="stats-panel" class="ui-panel">
+        <h3>Car Stats</h3>
+        <div class="stat-bar">Speed: <span id="st-speed" class="stat-val">0</span></div>
+        <div class="stat-bar">Accel: <span id="st-accel" class="stat-val">0</span></div>
+        <div class="stat-bar">Weight: <span id="st-weight" class="stat-val">0 g</span></div>
+        <div class="stat-bar">Stability: <span id="st-stab" class="stat-val">0</span></div>
+        <br>
+        <button id="go-race-btn" class="btn-action" style="width: 100%; display: none;" onclick="startRaceMode()">เข้าสู่สนามแข่ง!</button>
+    </div>
+
+    <div id="race-ui" class="ui-panel">
+        <h2 style="margin: 0 0 5px 0; color: #00e676; font-family: monospace; font-size: 2rem;" id="timer">00:00:00</h2>
+        <div id="lap-counter" style="margin-bottom: 10px; font-weight: bold;">Lap: 0 / 3</div>
+        <button class="btn-action" onclick="toggleRun()" id="btn-run">ปล่อยรถ</button>
+        <button class="btn-action" style="background: #555;" onclick="resetGame()">แต่งรถใหม่</button>
+    </div>
+
     <div id="canvas-container"></div>
 
-    <div id="ui-panel">
-        <div>
-            <div id="step-name" class="step-title">ขั้นตอนที่ 1: เลือก Chassis</div>
-            <div id="item-info" class="item-desc">เลือกลักษณะโครงรถหลักเพื่อเริ่มประกอบ</div>
-        </div>
-        <div id="options-container" class="btn-group"></div>
-        <div style="display: flex; justify-content: space-between; margin-top: 10px;">
-            <button id="prev-btn" onclick="prevStep()">ย้อนกลับ</button>
-            <button id="next-btn" onclick="nextStep()">ขั้นตอนถัดไป</button>
-        </div>
-    </div>
-
-    <div id="track-select-screen">
-        <h2>เลือกสนามแข่ง Tamiya (3 สนาม)</h2>
-        <div style="display: flex; gap: 15px; margin-top: 20px;">
-            <button onclick="selectTrack(1)">สนาม 1: High-Speed Circuit (ทางตรง)</button>
-            <button onclick="selectTrack(2)">สนาม 2: Technical Curve (ทางโค้ง)</button>
-            <button onclick="selectTrack(3)">สนาม 3: Slope Jump (ทางเนินกระโดด)</button>
-        </div>
-    </div>
-
-    <div id="race-ui">
-        <div>สนาม: <span id="track-name">Track 1</span></div>
-        <div>เวลาที่ใช้ (3 รอบ): <span id="timer">0.00</span> วินาที</div>
-        <button id="start-btn" onclick="startRace()" style="margin-top: 10px;">ปล่อยรถแข่ง!</button>
-        <button onclick="resetToBuild()" style="margin-top: 10px; background:#555;">กลับไปแต่งรถ</button>
-    </div>
-
 <script>
-const buildSteps = [
-    { name: "Chassis", items: [
-        { name: "AR Chassis", desc: "แชสซีมอเตอร์หลัง ศูนย์ถ่วงดีเยี่ยม", color: 0x333333, speedMult: 1.0 },
-        { name: "MS Chassis", desc: "แชสซีมอเตอร์กลาง สมดุลส่งกำลังดี", color: 0x555555, speedMult: 1.05 }
-    ]},
-    { name: "Motor", items: [
-        { name: "Atomic-Tuned (เขียว)", desc: "สายสมดุล ควบคุมง่าย สมดุลสปีดแรงบิด", color: 0x2e7d32, speedMult: 1.1 },
-        { name: "Mach-Dash (แดง)", desc: "รอบจัด รอบ RPM สูง เน้นทางตรง", color: 0xc62828, speedMult: 1.4 }
-    ]},
-    { name: "Gear Set", items: [
-        { name: "3.5:1 (เขียว/ชมพู)", desc: "เฟืองสปีดเน้นความเร็วปลายทางตรง", color: 0xf48fb1, speedMult: 1.25 },
-        { name: "4:1 (ฟ้า/ส้ม)", desc: "เฟืองแรงบิดเน้นอัตราเร่งขึ้นเนิน", color: 0xffb74d, speedMult: 1.0 }
-    ]},
-    { name: "Wheel & Tire", items: [
-        { name: "Small + Maroon Tire", desc: "ล้อเล็กยางลื่น ยึดเกาะปานกลาง ไม่เด้ง", color: 0x880e4f, speedMult: 1.0 },
-        { name: "Large + Super Hard", desc: "ล้อใหญ่ยางแข็ง ความเร็วปลายสูง", color: 0x212121, speedMult: 1.2 }
-    ]},
-    { name: "Bumper & Roller", items: [
-        { name: "FRP + Plastic Rollers", desc: "ชุดกันชนสเปกเริ่มต้น ทานแรงเสียดทานปานกลาง", color: 0x9e9e9e, speedMult: 1.0 },
-        { name: "Carbon + Aluminum", desc: "กันชนคาร์บอนและลูกกลิ้งอลูมิเนียม ลื่นนิ่ง", color: 0x111111, speedMult: 1.15 }
-    ]},
-    { name: "Body Shell", items: [
-        { name: "Avante Jr. Body", desc: "ครอบบอดี้แอโรสปอร์ตคลาสสิก", color: 0x1565c0, speedMult: 1.0 },
-        { name: "Neo Vanquish Body", desc: "ครอบบอดี้ดีไซน์โฉบเฉี่ยว", color: 0xd32f2f, speedMult: 1.0 }
-    ]}
-];
+// --- 0. LOADING SCREEN SYSTEM ---
+function hideLoadingScreen() {
+    const loader = document.getElementById('loading-screen');
+    loader.style.opacity = '0';
+    setTimeout(() => {
+        loader.style.display = 'none';
+    }, 500);
+}
 
-let currentStep = 0;
-let carConfig = {};
-let parts = {};
+function showLoadingScreen(msg, duration, callback) {
+    const loader = document.getElementById('loading-screen');
+    document.getElementById('loading-text').innerText = msg;
+    loader.style.display = 'flex';
+    setTimeout(() => {
+        loader.style.opacity = '1';
+    }, 10);
+    
+    setTimeout(() => {
+        if (callback) callback();
+        hideLoadingScreen();
+    }, duration);
+}
 
-// --- ตั้งค่าระบบ 3D Canvas ---
+// --- 1. SETUP SCENE & CAMERA ---
 const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x1a1a1a);
+scene.background = new THREE.Color(0x111111);
 
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / (window.innerHeight * 0.6), 0.1, 1000);
-camera.position.set(3, 2, 4);
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 4, 8);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight * 0.6);
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
 container.appendChild(renderer.domElement);
 
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 
-// แสงสว่าง
-scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-const light = new THREE.DirectionalLight(0xffffff, 0.8);
-light.position.set(5, 10, 5);
+scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+const light = new THREE.DirectionalLight(0xffffff, 1.0);
+light.position.set(5, 12, 8);
 scene.add(light);
 
-// ตัวกลุ่มโมเดลรถแข่ง
+const grid = new THREE.GridHelper(30, 30, 0x444444, 0x222222);
+scene.add(grid);
+
+// --- 2. PARTS DATA ---
+const assemblySteps = [
+    { key: 'chassis', name: 'Chassis (แชสซี)', items: [
+        { name: 'AR Chassis', speed: 5, accel: 6, weight: 15, stab: 7, color: 0x222222 },
+        { name: 'MA Chassis', speed: 6, accel: 7, weight: 18, stab: 8, color: 0x1565c0 },
+        { name: 'FM-A Chassis', speed: 6, accel: 8, weight: 16, stab: 6, color: 0xc62828 }
+    ]},
+    { key: 'motor', name: 'Motor (มอเตอร์)', items: [
+        { name: 'Atomic-Tuned', speed: 12, accel: 10, weight: 10, stab: 0, color: 0xef6c00 },
+        { name: 'Hyper-Dash', speed: 22, accel: 18, weight: 11, stab: -2, color: 0xd84315 },
+        { name: 'Mach-Dash', speed: 28, accel: 15, weight: 10, stab: -5, color: 0x1565c0 }
+    ]},
+    { key: 'gears', name: 'Gear Set (ชุดเฟือง)', items: [
+        { name: 'Standard 4:1 Gear', speed: 4, accel: 8, weight: 2, stab: 0, color: 0xffee58 },
+        { name: 'High Speed 3.5:1 Gear', speed: 8, accel: 4, weight: 2, stab: 0, color: 0x66bb6a }
+    ]},
+    { key: 'shaft', name: 'Drive Shaft (เพลาขับ)', items: [
+        { name: 'Stock Shaft', speed: 1, accel: 1, weight: 3, stab: 0, color: 0xaaaaaa },
+        { name: 'Hollow Propeller Shaft', speed: 3, accel: 3, weight: 1, stab: 1, color: 0xff4081 }
+    ]},
+    { key: 'bearings', name: 'Bearings (ลูกปืน)', items: [
+        { name: 'Plastic Bushings', speed: 1, accel: 1, weight: 1, stab: 0, color: 0x888888 },
+        { name: 'HG Ball Bearings 620', speed: 6, accel: 5, weight: 3, stab: 2, color: 0x00e676 }
+    ]},
+    { key: 'wheels', name: 'Wheels (ล้อ)', items: [
+        { name: 'Small Dia. Dish Wheels', speed: 2, accel: 8, weight: 6, stab: 4, color: 0xffffff },
+        { name: 'Large Dia. Narrow Wheels', speed: 8, accel: 2, weight: 8, stab: 1, color: 0xffb300 }
+    ]},
+    { key: 'tires', name: 'Tires (ยาง)', items: [
+        { name: 'Super Hard Rubber Tires', speed: 4, accel: 4, weight: 4, stab: 5, color: 0x222222 },
+        { name: 'Maroon Low Friction Tires', speed: 7, accel: 2, weight: 3, stab: 2, color: 0x880e4f }
+    ]},
+    { key: 'plates', name: 'Plates (กันชนแผ่นยึด)', items: [
+        { name: 'Front & Rear FRP Stay', speed: 2, accel: 0, weight: 8, stab: 6, color: 0x37474f },
+        { name: 'Carbon Multi-Reinforcing Plate', speed: 3, accel: 1, weight: 4, stab: 10, color: 0x111111 }
+    ]},
+    { key: 'rollers', name: 'Rollers (ลูกกลิ้ง)', items: [
+        { name: 'Plastic Rollers 13mm', speed: 2, accel: 1, weight: 2, stab: 3, color: 0x00bcd4 },
+        { name: 'Aluminum Ball-Race Rollers 19mm', speed: 6, accel: 3, weight: 5, stab: 9, color: 0xe0e0e0 }
+    ]},
+    { key: 'weights', name: 'Mass Weights (ชุดถ่วงน้ำหนัก)', items: [
+        { name: 'None (ไม่ติดถ่วง)', speed: 2, accel: 2, weight: 0, stab: -2, color: 0x000000 },
+        { name: 'Light Weight Block (6g)', speed: -1, accel: -1, weight: 6, stab: 8, color: 0xffd54f },
+        { name: 'Heavy Mass Damper (12g)', speed: -3, accel: -2, weight: 12, stab: 15, color: 0xb0bec5 }
+    ]},
+    { key: 'damper', name: 'Brake Pad / Damper (แผ่นแบก/เบรก)', items: [
+        { name: 'No Brake', speed: 3, accel: 2, weight: 0, stab: -1, color: 0x000000 },
+        { name: 'Sponge Brake Pad (Blue)', speed: -1, accel: 0, weight: 1, stab: 8, color: 0x1e88e5 }
+    ]},
+    { key: 'body', name: 'Body Shell (บอดี้)', items: [
+        { name: 'Avante Mk.III', speed: 4, accel: 2, weight: 12, stab: 2, color: 0x1976d2 },
+        { name: 'Magnum Saber', speed: 3, accel: 1, weight: 14, stab: 4, color: 0xffffff },
+        { name: 'Neo-Vanquish', speed: 5, accel: 3, weight: 10, stab: 1, color: 0x388e3c }
+    ]}
+];
+
+let currentStep = 0;
+let carStats = { speed: 0, accel: 0, weight: 0, stab: 0 };
+
 const carGroup = new THREE.Group();
 scene.add(carGroup);
 
-function clearPartsFromStep(stepIndex) {
-    for (let i = stepIndex; i < buildSteps.length; i++) {
-        const stepName = buildSteps[i].name;
-        if (parts[stepName]) {
-            carGroup.remove(parts[stepName]);
-            delete parts[stepName];
-            delete carConfig[stepName];
-        }
-    }
-}
-
-function updateAssemblyVisual(stepIndex, selectedItem) {
-    clearPartsFromStep(stepIndex);
-    carConfig[buildSteps[stepIndex].name] = selectedItem;
-
-    const mat = new THREE.MeshStandardMaterial({ color: selectedItem.color });
-    const stepName = buildSteps[stepIndex].name;
-
-    if (stepIndex === 0) { // Chassis
-        const geo = new THREE.BoxGeometry(1.2, 0.25, 2.2);
-        const mesh = new THREE.Mesh(geo, mat);
-        mesh.position.y = 0.2;
-        parts[stepName] = mesh;
-    } 
-    else if (stepIndex === 1) { // Motor
-        const geo = new THREE.CylinderGeometry(0.2, 0.2, 0.6, 16);
-        const mesh = new THREE.Mesh(geo, mat);
-        mesh.rotation.z = Math.PI / 2;
-        mesh.position.set(0, 0.35, 0);
-        parts[stepName] = mesh;
-    }
-    else if (stepIndex === 2) { // Gear
-        const geo = new THREE.CylinderGeometry(0.15, 0.15, 0.1, 16);
-        const mesh = new THREE.Mesh(geo, mat);
-        mesh.position.set(0.3, 0.35, -0.3);
-        parts[stepName] = mesh;
-    }
-    else if (stepIndex === 3) { // Wheel & Tire
-        const wheelsGroup = new THREE.Group();
-        const wheelGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.15, 16);
-        const positions = [[-0.7, 0.3, 0.8], [0.7, 0.3, 0.8], [-0.7, 0.3, -0.8], [0.7, 0.3, -0.8]];
-        positions.forEach(pos => {
-            const w = new THREE.Mesh(wheelGeo, mat);
-            w.rotation.z = Math.PI / 2;
-            w.position.set(...pos);
-            wheelsGroup.add(w);
-        });
-        parts[stepName] = wheelsGroup;
-    }
-    else if (stepIndex === 4) { // Bumper & Roller
-        const bumperGroup = new THREE.Group();
-        const plateGeo = new THREE.BoxGeometry(1.8, 0.05, 0.2);
-        const plateFront = new THREE.Mesh(plateGeo, mat);
-        plateFront.position.set(0, 0.2, 1.2);
-        const plateRear = new THREE.Mesh(plateGeo, mat);
-        plateRear.position.set(0, 0.2, -1.2);
-        bumperGroup.add(plateFront);
-        bumperGroup.add(plateRear);
-        parts[stepName] = bumperGroup;
-    }
-    else if (stepIndex === 5) { // Body Shell
-        const geo = new THREE.ConeGeometry(0.5, 1.5, 4);
-        const mesh = new THREE.Mesh(geo, mat);
-        mesh.rotation.x = Math.PI / 2;
-        mesh.position.set(0, 0.6, 0);
-        parts[stepName] = mesh;
-    }
-
-    if (parts[stepName]) {
-        carGroup.add(parts[stepName]);
-    }
-}
-
-function updateUI() {
-    const step = buildSteps[currentStep];
-    document.getElementById('step-name').innerText = `ขั้นตอนที่ ${currentStep + 1}: เลือก ${step.name}`;
-    const container = document.getElementById('options-container');
-    container.innerHTML = '';
+// --- 3. GARAGE BUILDER LOGIC ---
+function renderUI() {
+    const listEl = document.getElementById('options-list');
+    listEl.innerHTML = '';
     
-    const selectedItem = carConfig[step.name] || step.items[0];
-
-    step.items.forEach((item) => {
-        const btn = document.createElement('button');
-        btn.innerText = item.name;
-        if (item.name === selectedItem.name) btn.classList.add('active');
-        btn.onclick = () => {
-            Array.from(container.children).forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            document.getElementById('item-info').innerText = item.desc;
-            updateAssemblyVisual(currentStep, item);
-        };
-        container.appendChild(btn);
-    });
-    
-    document.getElementById('item-info').innerText = selectedItem.desc;
-    updateAssemblyVisual(currentStep, selectedItem);
-}
-
-function nextStep() {
-    if (currentStep < buildSteps.length - 1) {
-        currentStep++;
-        updateUI();
-    } else {
-        document.getElementById('track-select-screen').style.display = 'flex';
-    }
-}
-
-function prevStep() {
-    if (currentStep > 0) {
-        currentStep--;
-        updateUI();
-    }
-}
-
-// --- ระบบสร้างสนามและมุมมอง Top-View ---
-let trackMesh;
-let selectedTrackId = 1;
-
-function selectTrack(trackId) {
-    selectedTrackId = trackId;
-    document.getElementById('track-select-screen').style.display = 'none';
-    document.getElementById('ui-panel').style.display = 'none';
-    document.getElementById('race-ui').style.display = 'block';
-    document.getElementById('track-name').innerText = `สนามที่ ${trackId}`;
-    
-    if (trackMesh) scene.remove(trackMesh);
-
-    let trackGeo;
-    if (trackId === 1) {
-        trackGeo = new THREE.TorusGeometry(4, 0.6, 16, 100);
-    } else if (trackId === 2) {
-        trackGeo = new THREE.TorusGeometry(3, 0.8, 16, 50);
-    } else {
-        trackGeo = new THREE.TorusGeometry(5, 0.5, 16, 100);
-    }
-
-    const trackMat = new THREE.MeshStandardMaterial({ color: 0x444444, wireframe: false });
-    trackMesh = new THREE.Mesh(trackGeo, trackMat);
-    trackMesh.rotation.x = Math.PI / 2;
-    scene.add(trackMesh);
-
-    // ล็อกมุมกล้อง Top-View ให้สมบูรณ์
-    controls.enabled = false;
-    camera.position.set(0, 14, 0);
-    controls.target.set(0, 0, 0);
-    controls.update();
-}
-
-let isRacing = false;
-let raceTime = 0;
-let angle = 0;
-
-function startRace() {
-    if (isRacing) return;
-    isRacing = true;
-    raceTime = 0;
-    angle = 0;
-    document.getElementById('start-btn').disabled = true;
-
-    // คำนวณตัวคูณความเร็วจากสเปกรถที่ประกอบ
-    let totalSpeedMult = 1.0;
-    Object.values(carConfig).forEach(item => {
-        if (item.speedMult) totalSpeedMult *= item.speedMult;
-    });
-
-    const radius = selectedTrackId === 2 ? 3 : (selectedTrackId === 3 ? 5 : 4);
-    const speed = 0.04 * totalSpeedMult;
-
-    const interval = setInterval(() => {
-        if (!isRacing) { clearInterval(interval); return; }
-        raceTime += 0.03;
-        document.getElementById('timer').innerText = raceTime.toFixed(2);
+    if (currentStep < assemblySteps.length) {
+        const step = assemblySteps[currentStep];
+        document.getElementById('step-desc').innerText = `ขั้นตอนที่ ${currentStep + 1}: เลือก ${step.name}`;
         
-        angle += speed;
-        carGroup.position.x = Math.cos(angle) * radius;
-        carGroup.position.z = Math.sin(angle) * radius;
-        carGroup.rotation.y = -angle;
+        step.items.forEach(item => {
+            const btn = document.createElement('button');
+            btn.className = 'item-btn';
+            btn.innerHTML = `<strong>${item.name}</strong><br><small>Spd:+${item.speed} | Acc:+${item.accel} | Wt:${item.weight}g | Stab:+${item.stab}</small>`;
+            btn.onclick = () => selectPart(step.key, item);
+            listEl.appendChild(btn);
+        });
+    } else {
+        document.getElementById('step-desc').innerText = "ประกอบรถเสร็จสมบูรณ์!";
+        document.getElementById('go-race-btn').style.display = 'block';
+    }
+}
 
-        if (angle >= Math.PI * 6) { // วิ่งครบ 3 รอบ
-            isRacing = false;
-            clearInterval(interval);
-            document.getElementById('start-btn').disabled = false;
-            alert(`เข้าเส้นชัยแล้ว! เวลา 3 รอบ: ${raceTime.toFixed(2)} วินาที`);
+function selectPart(stepKey, item) {
+    carStats.speed += item.speed;
+    carStats.accel += item.accel;
+    carStats.weight += item.weight;
+    carStats.stab += item.stab;
+    
+    document.getElementById('st-speed').innerText = carStats.speed;
+    document.getElementById('st-accel').innerText = carStats.accel;
+    document.getElementById('st-weight').innerText = carStats.weight + " g";
+    document.getElementById('st-stab').innerText = carStats.stab;
+
+    updateCarModel(stepKey, item);
+
+    currentStep++;
+    renderUI();
+}
+
+function updateCarModel(key, item) {
+    if (key === 'chassis') {
+        const geo = new THREE.BoxGeometry(0.8, 0.2, 1.8);
+        const mat = new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.5 });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.y = 0.15;
+        carGroup.add(mesh);
+    } 
+    else if (key === 'motor') {
+        const mGeo = new THREE.BoxGeometry(0.35, 0.2, 0.45);
+        const mMat = new THREE.MeshStandardMaterial({ color: item.color, metalness: 0.6 });
+        const mMesh = new THREE.Mesh(mGeo, mMat);
+        mMesh.position.set(0, 0.25, -0.2);
+        carGroup.add(mMesh);
+    }
+    else if (key === 'wheels') {
+        const wGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.12, 16);
+        const wMat = new THREE.MeshStandardMaterial({ color: item.color });
+        [[-0.45, 0.25, 0.5], [0.45, 0.25, 0.5], [-0.45, 0.25, -0.5], [0.45, 0.25, -0.5]].forEach(p => {
+            const w = new THREE.Mesh(wGeo, wMat);
+            w.rotation.z = Math.PI / 2;
+            w.position.set(...p);
+            carGroup.add(w);
+        });
+    }
+    else if (key === 'plates') {
+        const pGeo = new THREE.BoxGeometry(1.4, 0.05, 0.2);
+        const pMat = new THREE.MeshStandardMaterial({ color: item.color });
+        const frontPlate = new THREE.Mesh(pGeo, pMat);
+        frontPlate.position.set(0, 0.12, 1.0);
+        const rearPlate = new THREE.Mesh(pGeo, pMat);
+        rearPlate.position.set(0, 0.12, -1.0);
+        carGroup.add(frontPlate, rearPlate);
+    }
+    else if (key === 'rollers') {
+        const rGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.05, 12);
+        const rMat = new THREE.MeshStandardMaterial({ color: item.color, metalness: 0.8 });
+        [[-0.65, 0.2, 1.0], [0.65, 0.2, 1.0], [-0.65, 0.2, -1.0], [0.65, 0.2, -1.0]].forEach(p => {
+            const r = new THREE.Mesh(rGeo, rMat);
+            r.position.set(...p);
+            carGroup.add(r);
+        });
+    }
+    else if (key === 'body') {
+        const bGeo = new THREE.BoxGeometry(0.7, 0.25, 1.2);
+        const bMat = new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.2, metalness: 0.2 });
+        const bMesh = new THREE.Mesh(bGeo, bMat);
+        bMesh.position.y = 0.35;
+        carGroup.add(bMesh);
+    }
+}
+
+// --- 4. TRACK & RACE SYSTEM ---
+let isRacingMode = false;
+let isRunning = false;
+let progress = 0;
+let lap = 0;
+let startTime = 0;
+let elapsedTime = 0;
+let raceTimer = null;
+
+const trackPoints = [
+    new THREE.Vector3(-12, 0, 7),
+    new THREE.Vector3(0, 0, 7),
+    new THREE.Vector3(12, 0, 7),
+    new THREE.Vector3(14, 0, 3),
+    new THREE.Vector3(10, 0, -2),
+    new THREE.Vector3(3, 1.5, -2),
+    new THREE.Vector3(-3, 0, -2), 
+    new THREE.Vector3(-8, 0, -6),
+    new THREE.Vector3(-12, 0, -2),
+    new THREE.Vector3(-5, 0, 2),
+    new THREE.Vector3(5, 0, -8),
+    new THREE.Vector3(12, 0, -8),
+    new THREE.Vector3(14, 0, -2),
+    new THREE.Vector3(-14, 0, 2)
+];
+const trackCurve = new THREE.CatmullRomCurve3(trackPoints, true, 'centripetal');
+
+const tubeGeo = new THREE.TubeGeometry(trackCurve, 400, 0.8, 8, true);
+const trackMesh = new THREE.Mesh(tubeGeo, new THREE.MeshStandardMaterial({ color: 0xdcdcdc, roughness: 0.4 }));
+trackMesh.scale.set(1, 0.12, 1);
+trackMesh.visible = false;
+scene.add(trackMesh);
+
+const currentPos = new THREE.Vector3();
+const targetPos = new THREE.Vector3();
+const upVector = new THREE.Vector3(0, 1, 0);
+
+function setCarOnTrack(p) {
+    trackCurve.getPointAt(p, currentPos);
+    trackCurve.getPointAt((p + 0.003) % 1, targetPos);
+
+    currentPos.y = currentPos.y * 0.12 + 0.12;
+    targetPos.y = targetPos.y * 0.12 + 0.12;
+
+    carGroup.position.copy(currentPos);
+    carGroup.up.copy(upVector);
+    carGroup.lookAt(targetPos);
+}
+
+function startRaceMode() {
+    showLoadingScreen("กำลังสร้างสนามแข่งและเข้าสู่โหมด Top View...", 1200, () => {
+        isRacingMode = true;
+        document.getElementById('parts-selector').style.display = 'none';
+        document.getElementById('stats-panel').style.display = 'none';
+        document.getElementById('race-ui').style.display = 'block';
+        
+        grid.visible = false;
+        trackMesh.visible = true;
+        
+        progress = 0;
+        setCarOnTrack(0);
+
+        camera.position.set(0, 35, 0.1);
+        controls.target.set(0, 0, 0);
+        controls.enableRotate = false;
+        controls.update();
+    });
+}
+
+function resetGame() {
+    showLoadingScreen("กำลังรีเซ็ตและเปิดโรงแต่งรถ...", 800, () => {
+        location.reload();
+    });
+}
+
+function toggleRun() {
+    const btn = document.getElementById('btn-run');
+    isRunning = !isRunning;
+    
+    if (isRunning) {
+        btn.innerText = "หยุดรถ";
+        btn.style.background = "#ff9800";
+        if (lap >= 3) { 
+            lap = 0; 
+            progress = 0; 
+            elapsedTime = 0; 
+            document.getElementById('timer').innerText = "00:00:00";
         }
-    }, 30);
+        document.getElementById('lap-counter').innerText = `Lap: ${lap} / 3`;
+        startTime = Date.now() - elapsedTime;
+        raceTimer = setInterval(updateTimer, 10);
+    } else {
+        btn.innerText = "ปล่อยรถ";
+        btn.style.background = "#e53935";
+        elapsedTime = Date.now() - startTime;
+        clearInterval(raceTimer);
+    }
 }
 
-function resetToBuild() {
-    isRacing = false;
-    document.getElementById('start-btn').disabled = false;
-    if (trackMesh) scene.remove(trackMesh);
-    
-    carGroup.position.set(0, 0, 0);
-    carGroup.rotation.set(0, 0, 0);
-    
-    document.getElementById('ui-panel').style.display = 'flex';
-    document.getElementById('race-ui').style.display = 'none';
-    currentStep = 0;
-    
-    controls.enabled = true;
-    camera.position.set(3, 2, 4);
-    controls.target.set(0, 0, 0);
-    controls.update();
-    
-    updateUI();
+function updateTimer() {
+    const diff = Date.now() - startTime;
+    const ms = Math.floor((diff % 1000) / 10).toString().padStart(2, '0');
+    const sec = Math.floor((diff / 1000) % 60).toString().padStart(2, '0');
+    const min = Math.floor(diff / (1000 * 60)).toString().padStart(2, '0');
+    document.getElementById('timer').innerText = `${min}:${sec}:${ms}`;
 }
 
+// --- 5. ANIMATION LOOP ---
 function animate() {
     requestAnimationFrame(animate);
-    if (controls.enabled) controls.update();
+
+    if (isRacingMode && isRunning) {
+        const runSpeed = 0.0005 + (carStats.speed * 0.00005);
+        progress += runSpeed;
+
+        if (progress >= 1) {
+            progress -= 1;
+            lap++;
+            document.getElementById('lap-counter').innerText = `Lap: ${Math.min(lap, 3)} / 3`;
+            
+            if (lap >= 3) {
+                isRunning = false;
+                clearInterval(raceTimer);
+                document.getElementById('btn-run').innerText = "ปล่อยรถอีกครั้ง";
+                document.getElementById('btn-run').style.background = "#e53935";
+                setTimeout(() => alert(`เข้าเส้นชัยแล้ว! เวลาทั้งหมด 3 รอบ: ${document.getElementById('timer').innerText}`), 100);
+            }
+        }
+
+        setCarOnTrack(progress);
+    }
+
+    controls.update();
     renderer.render(scene, camera);
 }
 
-window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / (window.innerHeight * 0.6);
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight * 0.6);
+renderUI();
+animate();
+
+// เมื่อโหลดหน้าเว็บเสร็จ ให้ปิด Loading Screen แรก
+window.addEventListener('load', () => {
+    setTimeout(hideLoadingScreen, 1000);
 });
 
-updateUI();
-animate();
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
 </script>
 </body>
 </html>
