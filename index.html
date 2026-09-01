@@ -3,59 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tamiya Mini 4WD Full Custom - Top View Track</title>
+    <title>Tamiya Mini 4WD Full Custom - Fixed & Playable</title>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #111; color: white; user-select: none; }
         #canvas-container { width: 100vw; height: 100vh; }
         
-        /* Loading Screen CSS */
+        /* Loading Screen */
         #loading-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: #0a0a0a;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            transition: opacity 0.5s ease;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #0a0a0a; z-index: 9999; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; transition: opacity 0.4s ease;
         }
         .spinner {
-            width: 60px;
-            height: 60px;
-            border: 6px solid #222;
-            border-top: 6px solid #ff4444;
-            border-right: 6px solid #ff4444;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-bottom: 20px;
-            box-shadow: 0 0 15px rgba(255, 68, 68, 0.4);
+            width: 50px; height: 50px; border: 5px solid #222; border-top: 5px solid #ff4444;
+            border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 15px;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .loading-title { color: #ff4444; font-size: 1.8rem; margin: 0; letter-spacing: 2px; text-transform: uppercase; font-weight: 800; }
-        .loading-text { color: #aaa; margin-top: 8px; font-size: 0.95rem; font-family: monospace; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-title { color: #ff4444; font-size: 1.8rem; margin: 0; letter-spacing: 2px; font-weight: 800; }
+        .loading-text { color: #aaa; margin-top: 8px; font-size: 0.9rem; font-family: monospace; }
 
         /* UI Panels */
-        .ui-panel { position: absolute; z-index: 10; background: rgba(0,0,0,0.85); border: 1px solid #444; border-radius: 8px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        #parts-selector { top: 20px; left: 20px; width: 320px; max-height: 85vh; overflow-y: auto; }
-        #stats-panel { top: 20px; right: 20px; width: 220px; }
-        #race-ui { bottom: 20px; left: 50%; transform: translateX(-50%); text-align: center; display: none; }
+        .ui-panel { position: absolute; z-index: 10; background: rgba(15, 15, 20, 0.88); border: 1px solid #444; border-radius: 8px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); backdrop-filter: blur(5px); }
+        #parts-selector { top: 20px; left: 20px; width: 330px; max-height: 85vh; overflow-y: auto; }
+        #stats-panel { top: 20px; right: 20px; width: 230px; }
+        #race-ui { bottom: 25px; left: 50%; transform: translateX(-50%); text-align: center; display: none; }
         
-        h3 { margin: 0 0 10px 0; color: #ff4444; border-bottom: 1px solid #444; padding-bottom: 5px; }
-        .step-title { font-size: 0.95rem; color: #ffca28; margin-bottom: 8px; font-weight: bold; }
-        .item-btn { display: block; width: 100%; padding: 8px 10px; margin: 5px 0; background: #222; border: 1px solid #555; color: white; border-radius: 5px; cursor: pointer; text-align: left; transition: 0.2s; }
-        .item-btn:hover { background: #e53935; border-color: #ff5252; }
+        h3 { margin: 0 0 10px 0; color: #ff4444; border-bottom: 1px solid #444; padding-bottom: 5px; text-transform: uppercase; font-size: 1.1rem; }
+        .step-title { font-size: 0.95rem; color: #ffca28; margin-bottom: 10px; font-weight: bold; }
         
-        .stat-bar { margin: 6px 0; font-size: 0.85rem; display: flex; justify-content: space-between; }
+        .item-btn { display: block; width: 100%; padding: 10px; margin: 6px 0; background: #222; border: 1px solid #555; color: white; border-radius: 6px; cursor: pointer; text-align: left; transition: all 0.2s; }
+        .item-btn:hover { background: #d32f2f; border-color: #ff5252; transform: translateY(-1px); }
+        
+        .stat-bar { margin: 8px 0; font-size: 0.9rem; display: flex; justify-content: space-between; }
         .stat-val { font-weight: bold; color: #00e676; }
-        .btn-action { background: #e53935; color: white; border: none; padding: 10px 20px; font-weight: bold; border-radius: 5px; cursor: pointer; font-size: 1rem; margin: 0 5px; }
+        .btn-action { background: #e53935; color: white; border: none; padding: 10px 20px; font-weight: bold; border-radius: 5px; cursor: pointer; font-size: 1rem; margin: 0 4px; transition: 0.2s; }
         .btn-action:hover { background: #ff5252; }
+
+        #co-message { color: #ff1744; font-weight: bold; font-size: 1.4rem; display: none; margin-bottom: 8px; animation: blink 0.6s infinite alternate; }
+        @keyframes blink { from { opacity: 1; } to { opacity: 0.3; } }
     </style>
     
     <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -66,7 +51,7 @@
     <div id="loading-screen">
         <div class="spinner"></div>
         <h2 class="loading-title">Tamiya Mini 4WD</h2>
-        <div id="loading-text" class="loading-text">กำลังโหลดโมเดล 3D และชิ้นส่วน...</div>
+        <div id="loading-text" class="loading-text">กำลังโหลดสนามแข่ง 3D...</div>
     </div>
 
     <div id="parts-selector" class="ui-panel">
@@ -86,8 +71,9 @@
     </div>
 
     <div id="race-ui" class="ui-panel">
-        <h2 style="margin: 0 0 5px 0; color: #00e676; font-family: monospace; font-size: 2rem;" id="timer">00:00:00</h2>
-        <div id="lap-counter" style="margin-bottom: 10px; font-weight: bold;">Lap: 0 / 3</div>
+        <div id="co-message">⚠️ COURSE OUT! (หลุดโค้ง)</div>
+        <h2 style="margin: 0 0 5px 0; color: #00e676; font-family: monospace; font-size: 2.2rem;" id="timer">00:00:00</h2>
+        <div id="lap-counter" style="margin-bottom: 12px; font-weight: bold;">Lap: 0 / 3</div>
         <button class="btn-action" onclick="toggleRun()" id="btn-run">ปล่อยรถ</button>
         <button class="btn-action" style="background: #555;" onclick="resetGame()">แต่งรถใหม่</button>
     </div>
@@ -99,18 +85,14 @@
 function hideLoadingScreen() {
     const loader = document.getElementById('loading-screen');
     loader.style.opacity = '0';
-    setTimeout(() => {
-        loader.style.display = 'none';
-    }, 500);
+    setTimeout(() => { loader.style.display = 'none'; }, 400);
 }
 
 function showLoadingScreen(msg, duration, callback) {
     const loader = document.getElementById('loading-screen');
     document.getElementById('loading-text').innerText = msg;
     loader.style.display = 'flex';
-    setTimeout(() => {
-        loader.style.opacity = '1';
-    }, 10);
+    loader.style.opacity = '1';
     
     setTimeout(() => {
         if (callback) callback();
@@ -121,25 +103,28 @@ function showLoadingScreen(msg, duration, callback) {
 // --- 1. SETUP SCENE & CAMERA ---
 const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x111111);
+scene.background = new THREE.Color(0x111116);
 
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 4, 8);
+camera.position.set(0, 3.5, 5);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
+renderer.shadowMap.enabled = true;
 container.appendChild(renderer.domElement);
 
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
+controls.target.set(0, 0.3, 0);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-const light = new THREE.DirectionalLight(0xffffff, 1.0);
-light.position.set(5, 12, 8);
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+const light = new THREE.DirectionalLight(0xffffff, 1.2);
+light.position.set(10, 20, 15);
+light.castShadow = true;
 scene.add(light);
 
-const grid = new THREE.GridHelper(30, 30, 0x444444, 0x222222);
+const grid = new THREE.GridHelper(20, 20, 0x444444, 0x222222);
 scene.add(grid);
 
 // --- 2. PARTS DATA ---
@@ -150,7 +135,7 @@ const assemblySteps = [
         { name: 'FM-A Chassis', speed: 6, accel: 8, weight: 16, stab: 6, color: 0xc62828 }
     ]},
     { key: 'motor', name: 'Motor (มอเตอร์)', items: [
-        { name: 'Atomic-Tuned', speed: 12, accel: 10, weight: 10, stab: 0, color: 0xef6c00 },
+        { name: 'Atomic-Tuned', speed: 12, accel: 10, weight: 10, stab: 2, color: 0xef6c00 },
         { name: 'Hyper-Dash', speed: 22, accel: 18, weight: 11, stab: -2, color: 0xd84315 },
         { name: 'Mach-Dash', speed: 28, accel: 15, weight: 10, stab: -5, color: 0x1565c0 }
     ]},
@@ -171,7 +156,7 @@ const assemblySteps = [
         { name: 'Large Dia. Narrow Wheels', speed: 8, accel: 2, weight: 8, stab: 1, color: 0xffb300 }
     ]},
     { key: 'tires', name: 'Tires (ยาง)', items: [
-        { name: 'Super Hard Rubber Tires', speed: 4, accel: 4, weight: 4, stab: 5, color: 0x222222 },
+        { name: 'Super Hard Rubber Tires', speed: 4, accel: 4, weight: 4, stab: 5, color: 0x111111 },
         { name: 'Maroon Low Friction Tires', speed: 7, accel: 2, weight: 3, stab: 2, color: 0x880e4f }
     ]},
     { key: 'plates', name: 'Plates (กันชนแผ่นยึด)', items: [
@@ -179,21 +164,21 @@ const assemblySteps = [
         { name: 'Carbon Multi-Reinforcing Plate', speed: 3, accel: 1, weight: 4, stab: 10, color: 0x111111 }
     ]},
     { key: 'rollers', name: 'Rollers (ลูกกลิ้ง)', items: [
-        { name: 'Plastic Rollers 13mm', speed: 2, accel: 1, weight: 2, stab: 3, color: 0x00bcd4 },
-        { name: 'Aluminum Ball-Race Rollers 19mm', speed: 6, accel: 3, weight: 5, stab: 9, color: 0xe0e0e0 }
+        { name: 'Plastic Rollers 13mm', speed: 2, accel: 1, weight: 2, stab: 4, color: 0x00bcd4 },
+        { name: 'Aluminum Ball-Race Rollers 19mm', speed: 6, accel: 3, weight: 5, stab: 10, color: 0xe0e0e0 }
     ]},
     { key: 'weights', name: 'Mass Weights (ชุดถ่วงน้ำหนัก)', items: [
-        { name: 'None (ไม่ติดถ่วง)', speed: 2, accel: 2, weight: 0, stab: -2, color: 0x000000 },
+        { name: 'None (ไม่ติดถ่วง)', speed: 2, accel: 2, weight: 0, stab: -3, color: 0x000000 },
         { name: 'Light Weight Block (6g)', speed: -1, accel: -1, weight: 6, stab: 8, color: 0xffd54f },
-        { name: 'Heavy Mass Damper (12g)', speed: -3, accel: -2, weight: 12, stab: 15, color: 0xb0bec5 }
+        { name: 'Heavy Mass Damper (12g)', speed: -3, accel: -2, weight: 12, stab: 16, color: 0xb0bec5 }
     ]},
     { key: 'damper', name: 'Brake Pad / Damper (แผ่นแบก/เบรก)', items: [
-        { name: 'No Brake', speed: 3, accel: 2, weight: 0, stab: -1, color: 0x000000 },
-        { name: 'Sponge Brake Pad (Blue)', speed: -1, accel: 0, weight: 1, stab: 8, color: 0x1e88e5 }
+        { name: 'No Brake', speed: 3, accel: 2, weight: 0, stab: -2, color: 0x000000 },
+        { name: 'Sponge Brake Pad (Blue)', speed: -1, accel: 0, weight: 1, stab: 9, color: 0x1e88e5 }
     ]},
     { key: 'body', name: 'Body Shell (บอดี้)', items: [
         { name: 'Avante Mk.III', speed: 4, accel: 2, weight: 12, stab: 2, color: 0x1976d2 },
-        { name: 'Magnum Saber', speed: 3, accel: 1, weight: 14, stab: 4, color: 0xffffff },
+        { name: 'Magnum Saber', speed: 3, accel: 1, weight: 14, stab: 4, color: 0xf5f5f5 },
         { name: 'Neo-Vanquish', speed: 5, accel: 3, weight: 10, stab: 1, color: 0x388e3c }
     ]}
 ];
@@ -243,54 +228,111 @@ function selectPart(stepKey, item) {
     renderUI();
 }
 
+// สร้างชิ้นส่วน 3D ทั้งหมดอย่างสมบูรณ์ (หัวรถหันไปทาง -Z)
 function updateCarModel(key, item) {
     if (key === 'chassis') {
-        const geo = new THREE.BoxGeometry(0.8, 0.2, 1.8);
-        const mat = new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.5 });
+        const geo = new THREE.BoxGeometry(0.8, 0.15, 1.8);
+        const mat = new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.4 });
         const mesh = new THREE.Mesh(geo, mat);
-        mesh.position.y = 0.15;
+        mesh.position.y = 0.2;
         carGroup.add(mesh);
     } 
     else if (key === 'motor') {
-        const mGeo = new THREE.BoxGeometry(0.35, 0.2, 0.45);
-        const mMat = new THREE.MeshStandardMaterial({ color: item.color, metalness: 0.6 });
+        const mGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.35, 16);
+        const mMat = new THREE.MeshStandardMaterial({ color: item.color, metalness: 0.7, roughness: 0.2 });
         const mMesh = new THREE.Mesh(mGeo, mMat);
-        mMesh.position.set(0, 0.25, -0.2);
+        mMesh.rotation.x = Math.PI / 2;
+        mMesh.position.set(0, 0.25, 0.2);
         carGroup.add(mMesh);
     }
+    else if (key === 'gears') {
+        const gGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.05, 16);
+        const gMat = new THREE.MeshStandardMaterial({ color: item.color });
+        const gMesh = new THREE.Mesh(gGeo, gMat);
+        gMesh.rotation.z = Math.PI / 2;
+        gMesh.position.set(0.22, 0.23, 0.4);
+        carGroup.add(gMesh);
+    }
+    else if (key === 'shaft') {
+        const sGeo = new THREE.CylinderGeometry(0.02, 0.02, 1.4, 8);
+        const sMat = new THREE.MeshStandardMaterial({ color: item.color, metalness: 0.9 });
+        const sMesh = new THREE.Mesh(sGeo, sMat);
+        sMesh.position.set(-0.2, 0.2, 0);
+        carGroup.add(sMesh);
+    }
+    else if (key === 'bearings') {
+        const bGeo = new THREE.TorusGeometry(0.05, 0.02, 8, 16);
+        const bMat = new THREE.MeshStandardMaterial({ color: item.color, metalness: 0.8 });
+        [[-0.38, 0.2, 0.5], [0.38, 0.2, 0.5], [-0.38, 0.2, -0.5], [0.38, 0.2, -0.5]].forEach(p => {
+            const b = new THREE.Mesh(bGeo, bMat);
+            b.rotation.y = Math.PI / 2;
+            b.position.set(...p);
+            carGroup.add(b);
+        });
+    }
     else if (key === 'wheels') {
-        const wGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.12, 16);
-        const wMat = new THREE.MeshStandardMaterial({ color: item.color });
-        [[-0.45, 0.25, 0.5], [0.45, 0.25, 0.5], [-0.45, 0.25, -0.5], [0.45, 0.25, -0.5]].forEach(p => {
+        const wGeo = new THREE.CylinderGeometry(0.24, 0.24, 0.12, 16);
+        const wMat = new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.3 });
+        [[-0.45, 0.24, 0.5], [0.45, 0.24, 0.5], [-0.45, 0.24, -0.5], [0.45, 0.24, -0.5]].forEach(p => {
             const w = new THREE.Mesh(wGeo, wMat);
             w.rotation.z = Math.PI / 2;
             w.position.set(...p);
             carGroup.add(w);
         });
     }
+    else if (key === 'tires') {
+        const tGeo = new THREE.TorusGeometry(0.25, 0.06, 12, 20);
+        const tMat = new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.8 });
+        [[-0.45, 0.24, 0.5], [0.45, 0.24, 0.5], [-0.45, 0.24, -0.5], [0.45, 0.24, -0.5]].forEach(p => {
+            const t = new THREE.Mesh(tGeo, tMat);
+            t.rotation.y = Math.PI / 2;
+            t.position.set(...p);
+            carGroup.add(t);
+        });
+    }
     else if (key === 'plates') {
-        const pGeo = new THREE.BoxGeometry(1.4, 0.05, 0.2);
-        const pMat = new THREE.MeshStandardMaterial({ color: item.color });
+        const pGeo = new THREE.BoxGeometry(1.5, 0.04, 0.25);
+        const pMat = new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.5 });
         const frontPlate = new THREE.Mesh(pGeo, pMat);
-        frontPlate.position.set(0, 0.12, 1.0);
+        frontPlate.position.set(0, 0.15, -1.0);
         const rearPlate = new THREE.Mesh(pGeo, pMat);
-        rearPlate.position.set(0, 0.12, -1.0);
+        rearPlate.position.set(0, 0.15, 1.0);
         carGroup.add(frontPlate, rearPlate);
     }
     else if (key === 'rollers') {
-        const rGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.05, 12);
+        const rGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.04, 16);
         const rMat = new THREE.MeshStandardMaterial({ color: item.color, metalness: 0.8 });
-        [[-0.65, 0.2, 1.0], [0.65, 0.2, 1.0], [-0.65, 0.2, -1.0], [0.65, 0.2, -1.0]].forEach(p => {
+        [[-0.7, 0.22, -1.0], [0.7, 0.22, -1.0], [-0.7, 0.22, 1.0], [0.7, 0.22, 1.0]].forEach(p => {
             const r = new THREE.Mesh(rGeo, rMat);
             r.position.set(...p);
             carGroup.add(r);
         });
     }
+    else if (key === 'weights') {
+        if (item.weight > 0) {
+            const wtGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.15, 12);
+            const wtMat = new THREE.MeshStandardMaterial({ color: item.color, metalness: 0.9, roughness: 0.2 });
+            [[-0.35, 0.25, 0], [0.35, 0.25, 0]].forEach(p => {
+                const wt = new THREE.Mesh(wtGeo, wtMat);
+                wt.position.set(...p);
+                carGroup.add(wt);
+            });
+        }
+    }
+    else if (key === 'damper') {
+        if (item.name !== 'No Brake') {
+            const dGeo = new THREE.BoxGeometry(0.8, 0.05, 0.15);
+            const dMat = new THREE.MeshStandardMaterial({ color: item.color });
+            const dMesh = new THREE.Mesh(dGeo, dMat);
+            dMesh.position.set(0, 0.08, 1.05);
+            carGroup.add(dMesh);
+        }
+    }
     else if (key === 'body') {
-        const bGeo = new THREE.BoxGeometry(0.7, 0.25, 1.2);
-        const bMat = new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.2, metalness: 0.2 });
+        const bGeo = new THREE.BoxGeometry(0.72, 0.22, 1.3);
+        const bMat = new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.2, metalness: 0.3 });
         const bMesh = new THREE.Mesh(bGeo, bMat);
-        bMesh.position.y = 0.35;
+        bMesh.position.set(0, 0.35, -0.05);
         carGroup.add(bMesh);
     }
 }
@@ -298,33 +340,52 @@ function updateCarModel(key, item) {
 // --- 4. TRACK & RACE SYSTEM ---
 let isRacingMode = false;
 let isRunning = false;
+let isCourseOut = false;
 let progress = 0;
 let lap = 0;
 let startTime = 0;
 let elapsedTime = 0;
 let raceTimer = null;
 
+// สร้างเส้นทางรางแข่ง
 const trackPoints = [
-    new THREE.Vector3(-12, 0, 7),
-    new THREE.Vector3(0, 0, 7),
-    new THREE.Vector3(12, 0, 7),
-    new THREE.Vector3(14, 0, 3),
-    new THREE.Vector3(10, 0, -2),
-    new THREE.Vector3(3, 1.5, -2),
-    new THREE.Vector3(-3, 0, -2), 
-    new THREE.Vector3(-8, 0, -6),
-    new THREE.Vector3(-12, 0, -2),
-    new THREE.Vector3(-5, 0, 2),
-    new THREE.Vector3(5, 0, -8),
-    new THREE.Vector3(12, 0, -8),
-    new THREE.Vector3(14, 0, -2),
-    new THREE.Vector3(-14, 0, 2)
+    new THREE.Vector3(-10, 0, 6),
+    new THREE.Vector3(0, 0, 6),
+    new THREE.Vector3(10, 0, 6),
+    new THREE.Vector3(13, 0, 2),
+    new THREE.Vector3(9, 0, -3),
+    new THREE.Vector3(2, 0, -3),
+    new THREE.Vector3(-4, 0, -3), 
+    new THREE.Vector3(-9, 0, -7),
+    new THREE.Vector3(-13, 0, -2),
+    new THREE.Vector3(-6, 0, 2),
+    new THREE.Vector3(4, 0, -6),
+    new THREE.Vector3(11, 0, -6),
+    new THREE.Vector3(13, 0, -1),
+    new THREE.Vector3(-12, 0, 2)
 ];
 const trackCurve = new THREE.CatmullRomCurve3(trackPoints, true, 'centripetal');
 
-const tubeGeo = new THREE.TubeGeometry(trackCurve, 400, 0.8, 8, true);
-const trackMesh = new THREE.Mesh(tubeGeo, new THREE.MeshStandardMaterial({ color: 0xdcdcdc, roughness: 0.4 }));
-trackMesh.scale.set(1, 0.12, 1);
+// สร้างโครงสร้างรางแข่งทรง U-Channel
+function createTrackMesh() {
+    const shape = new THREE.Shape();
+    shape.moveTo(-0.9, 0.5);
+    shape.lineTo(-0.8, 0);
+    shape.lineTo(0.8, 0);
+    shape.lineTo(0.9, 0.5);
+    shape.lineTo(0.82, 0.5);
+    shape.lineTo(0.75, 0.08);
+    shape.lineTo(-0.75, 0.08);
+    shape.lineTo(-0.82, 0.5);
+    shape.closePath();
+
+    const extrudeSettings = { steps: 350, bevelEnabled: false, extrudePath: trackCurve };
+    const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    const material = new THREE.MeshStandardMaterial({ color: 0x1e88e5, roughness: 0.4 });
+    return new THREE.Mesh(geometry, material);
+}
+
+const trackMesh = createTrackMesh();
 trackMesh.visible = false;
 scene.add(trackMesh);
 
@@ -334,10 +395,10 @@ const upVector = new THREE.Vector3(0, 1, 0);
 
 function setCarOnTrack(p) {
     trackCurve.getPointAt(p, currentPos);
-    trackCurve.getPointAt((p + 0.003) % 1, targetPos);
+    trackCurve.getPointAt((p + 0.002) % 1, targetPos);
 
-    currentPos.y = currentPos.y * 0.12 + 0.12;
-    targetPos.y = targetPos.y * 0.12 + 0.12;
+    currentPos.y += 0.1;
+    targetPos.y += 0.1;
 
     carGroup.position.copy(currentPos);
     carGroup.up.copy(upVector);
@@ -345,7 +406,7 @@ function setCarOnTrack(p) {
 }
 
 function startRaceMode() {
-    showLoadingScreen("กำลังสร้างสนามแข่งและเข้าสู่โหมด Top View...", 1200, () => {
+    showLoadingScreen("กำลังเตรียมรางแข่งและปรับมุมกล้อง...", 1000, () => {
         isRacingMode = true;
         document.getElementById('parts-selector').style.display = 'none';
         document.getElementById('stats-panel').style.display = 'none';
@@ -357,21 +418,35 @@ function startRaceMode() {
         progress = 0;
         setCarOnTrack(0);
 
-        camera.position.set(0, 35, 0.1);
+        // มุมกล้อง Top-View 
+        camera.position.set(0, 32, 0.1);
         controls.target.set(0, 0, 0);
-        controls.enableRotate = false;
         controls.update();
     });
 }
 
 function resetGame() {
-    showLoadingScreen("กำลังรีเซ็ตและเปิดโรงแต่งรถ...", 800, () => {
+    showLoadingScreen("กำลังเปิดโรงแต่งรถ...", 600, () => {
         location.reload();
     });
 }
 
 function toggleRun() {
     const btn = document.getElementById('btn-run');
+    
+    if (isCourseOut) {
+        // รีเซ็ตรถเข้าเส้นชัยใหม่หลังหลุดโค้ง
+        isCourseOut = false;
+        document.getElementById('co-message').style.display = 'none';
+        carGroup.rotation.set(0, 0, 0);
+        progress = 0;
+        lap = 0;
+        elapsedTime = 0;
+        setCarOnTrack(0);
+        document.getElementById('timer').innerText = "00:00:00";
+        document.getElementById('lap-counter').innerText = `Lap: 0 / 3`;
+    }
+
     isRunning = !isRunning;
     
     if (isRunning) {
@@ -402,13 +477,19 @@ function updateTimer() {
     document.getElementById('timer').innerText = `${min}:${sec}:${ms}`;
 }
 
-// --- 5. ANIMATION LOOP ---
+// --- 5. ANIMATION LOOP & PHYSICS ---
 function animate() {
     requestAnimationFrame(animate);
 
-    if (isRacingMode && isRunning) {
-        const runSpeed = 0.0005 + (carStats.speed * 0.00005);
+    if (isRacingMode && isRunning && !isCourseOut) {
+        const runSpeed = 0.0006 + (carStats.speed * 0.00006);
         progress += runSpeed;
+
+        // ระบบตรวจสอบคำนวณการหลุดโค้ง (Course Out Physics)
+        const requiredStab = (carStats.speed * 1.1) - (carStats.weight * 0.15);
+        if (requiredStab > carStats.stab && Math.random() < 0.003) {
+            triggerCourseOut();
+        }
 
         if (progress >= 1) {
             progress -= 1;
@@ -420,23 +501,39 @@ function animate() {
                 clearInterval(raceTimer);
                 document.getElementById('btn-run').innerText = "ปล่อยรถอีกครั้ง";
                 document.getElementById('btn-run').style.background = "#e53935";
-                setTimeout(() => alert(`เข้าเส้นชัยแล้ว! เวลาทั้งหมด 3 รอบ: ${document.getElementById('timer').innerText}`), 100);
+                setTimeout(() => alert(`🏁 เข้าเส้นชัยสำเร็จ! เวลาทั้งหมด: ${document.getElementById('timer').innerText}`), 100);
             }
         }
 
-        setCarOnTrack(progress);
+        if (!isCourseOut) {
+            setCarOnTrack(progress);
+        }
+    } else if (isCourseOut) {
+        // แอนิเมชันรถหมุนกระเด็นออกนอกราง
+        carGroup.position.x += 0.08;
+        carGroup.position.y += 0.05;
+        carGroup.rotation.x += 0.2;
+        carGroup.rotation.z += 0.2;
     }
 
     controls.update();
     renderer.render(scene, camera);
 }
 
+function triggerCourseOut() {
+    isCourseOut = true;
+    isRunning = false;
+    clearInterval(raceTimer);
+    document.getElementById('co-message').style.display = 'block';
+    document.getElementById('btn-run').innerText = "วางรถใหม่";
+    document.getElementById('btn-run').style.background = "#e53935";
+}
+
 renderUI();
 animate();
 
-// เมื่อโหลดหน้าเว็บเสร็จ ให้ปิด Loading Screen แรก
 window.addEventListener('load', () => {
-    setTimeout(hideLoadingScreen, 1000);
+    setTimeout(hideLoadingScreen, 800);
 });
 
 window.addEventListener('resize', () => {
